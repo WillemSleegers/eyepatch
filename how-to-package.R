@@ -16,5 +16,5 @@ library(usethis)
 gaps
 
 # Save data
-usethis::use_data(blink, overwrite = TRUE)
+usethis::use_data(trials, overwrite = TRUE)
 
