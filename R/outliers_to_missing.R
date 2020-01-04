@@ -8,7 +8,7 @@
 #' specified, the function will return a new vector of pupil sizes, but with
 #' outliers removed.
 #' @param constant An integer that raises or lowers the cutoff threshold.
-#'
+
 #' @details See Leys, Ley, Klein, Bernard, & Licata (2013) for details regarding
 #' why the MAD should be used.
 #'
@@ -29,7 +29,8 @@
 #'   geom_point(aes(y = pupil_left_clean))
 #'
 #' @export
-remove_outliers <- function(x, pupil = NULL, constant = 10) {
+remove_outliers <- function(x, pupil = NULL, constant = 10, log_file = NULL,
+  type = NULL) {
 
   # Check whether x and pupil are numeric (if specified)
   if (!is.numeric(x)) {

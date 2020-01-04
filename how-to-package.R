@@ -3,12 +3,14 @@
 
 # Load packages
 library(tidyverse)
+library(devtools)
 library(usethis)
-
 
 # Shortcuts ---------------------------------------------------------------
 
-# Cmd + Shift + L = Load package
+load_all()
+document()
+install()
 
 # Creating data files -----------------------------------------------------
 
@@ -16,5 +18,11 @@ library(usethis)
 gaps
 
 # Save data
-usethis::use_data(trials, overwrite = TRUE)
+usethis::use_data(invalid, overwrite = TRUE)
+
+# Documentation -----------------------------------------------------------
+
+
+
+
 

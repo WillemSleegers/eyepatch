@@ -4,13 +4,24 @@
 \alias{interpolate_gaps}
 \title{Interpolate missing data between gaps}
 \usage{
-interpolate_gaps(x, type = "linear", rule = 2, ...)
+interpolate_gaps(
+  x,
+  type = "linear",
+  rule = 2,
+  log = FALSE,
+  log_file = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{A numeric vector.}
 
 \item{type}{The type of interpolation to be used. Possible values are
 'linear' (default) or 'spline'.}
+
+\item{log}{A logical value. Should the action and results be logged?}
+
+\item{log_file}{A character string specifying the path to the log file.}
 }
 \description{
 \code{interpolate_gaps} returns a vector with the (originally) missing data

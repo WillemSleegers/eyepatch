@@ -5,6 +5,13 @@
 #' @param pupil A numeric vector of pupil size measurements.
 #' @param time A vector containing the timestamps associated with the
 #' pupil size measurements.
+#' @param gap_minimum A numeric value describing the minimum gap duration
+#' @param padding_before A numeric value describing by how much gaps should be
+#' padded before a gap
+#' @param padding_after
+#' @param grouping A vector containing grouping information
+#' @param log A logical value. Should the action and results be logged?
+#' @param log_file A character string specifying the path to the log file.
 #'
 #' @details The exact method of calculating the dilation speed is taken from
 #' Kret & Sjak-Shie (2018).
@@ -26,8 +33,8 @@
 #' @importFrom magrittr %>%
 #'
 #' @export
-pad_gaps <- function(pupil, time, gap_minimum = 75000, padding_before = 50000,
-  padding_after = 50000) {
+pad_gaps <- function(pupil, time, gap_minimum = 75, padding_before = 50,
+  padding_after = 50, grouping = NULL, log = FALSE, log_file = NULL) {
 
   # Check arguments
   if (length(time) == 0) {
@@ -56,6 +63,24 @@ pad_gaps <- function(pupil, time, gap_minimum = 75000, padding_before = 50000,
     pupil = pupil
   )
 
+  # Check whether grouping information has been provided
+  if (!is.null(grouping)) {
+
+    if (is.list(grouping)) {
+
+      df <- bind_cols(df, bind_cols(grouping))
+      df <- group_by_at(df, vars(-pupil, -time))
+
+    } else {
+      if (length(grouping) != nrow(df)) {
+        stop("Grouping length is not equal to the length of pupil observations")
+      } else {
+        df <- bind_cols(df, tibble(group = grouping))
+        df <- group_by(df, group)
+      }
+    }
+  }
+
   # Determine gap information
   df <- df %>%
     mutate(
@@ -63,13 +88,13 @@ pad_gaps <- function(pupil, time, gap_minimum = 75000, padding_before = 50000,
       gap = if_else(gap == 1 & lag(gap, default = 0) == 0, 1, 0),
       gap = if_else(is.na(pupil), cumsum(gap), NA_real_)
     ) %>%
-    group_by(gap) %>%
+    group_by(gap, add = TRUE) %>%
     mutate(
       gap_start = ifelse(!is.na(gap), min(time), NA),
       gap_end = ifelse(!is.na(gap), max(time), NA),
       gap_duration = gap_end - gap_start
     ) %>%
-    ungroup()
+    group_by_at(vars(-time, -pupil, -gap, -gap_start, -gap_end, -gap_duration))
 
   # Filter out gaps that are too small
   df <- df %>%
@@ -82,8 +107,8 @@ pad_gaps <- function(pupil, time, gap_minimum = 75000, padding_before = 50000,
   # Check if there are any gaps remaining
   if (length(unique(df$gap)) == 1) {
     return(pull(df, pupil))
+    #TODO: Log that no gaps were found
   }
-
 
   # Pad gaps before the gap
   if (padding_before) {
@@ -92,13 +117,14 @@ pad_gaps <- function(pupil, time, gap_minimum = 75000, padding_before = 50000,
         gap_before = if_else(is.na(gap) & !is.na(lag(gap)), 1, 0),
         gap_before = cumsum(gap_before)
       ) %>%
-      group_by(gap_before) %>%
+      group_by(gap_before, add = TRUE) %>%
       mutate(
         time_before = min(gap_start, na.rm = TRUE),
         pupil = if_else(time >= time_before - padding_before,
           NA_real_, pupil)
       ) %>%
-      ungroup() %>%
+      group_by_at(vars(-time, -pupil, -gap, -gap_start, -gap_end,
+        -gap_duration, -gap_before, -time_before)) %>%
       select(-gap_before, -time_before)
   }
 
@@ -109,7 +135,7 @@ pad_gaps <- function(pupil, time, gap_minimum = 75000, padding_before = 50000,
         gap_after = if_else(!is.na(gap) & is.na(lag(gap)), 1, 0),
         gap_after = cumsum(gap_after)
       ) %>%
-      group_by(gap_after) %>%
+      group_by(gap_after, add = TRUE) %>%
       mutate(
         time_after = max(gap_end, na.rm = TRUE),
         pupil = if_else(time <= time_after + padding_before,
@@ -119,6 +145,26 @@ pad_gaps <- function(pupil, time, gap_minimum = 75000, padding_before = 50000,
       select(-gap_after, -time_after)
   }
 
-  return(pull(df, pupil))
-}
+  output <- pull(df, pupil)
 
+  # Log
+  if (log) {
+    # Find the log file if it is not specified
+    if (is.null(log_file)) {
+      log_file <- find_log()
+    }
+
+    # Determine values to report
+    n <- length(pupil[!is.na(pupil)])
+    missing <- sum(is.na(output)) - sum(is.na(pupil))
+    missing_pct <- round(missing / n * 100, 2)
+
+    text <- paste0("Removed ", missing, " observations (", missing_pct,
+      "%) from '", deparse(substitute(pupil)), "' by padding gaps of ",
+      gap_minimum, " or longer by ", padding_before, " before gaps and ",
+      padding_after, " after gaps")
+    write(text, file = log_file, append = TRUE)
+  }
+
+  return(output)
+}

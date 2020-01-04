@@ -6,6 +6,8 @@
 #' @param x A numeric vector.
 #' @param type The type of interpolation to be used. Possible values are
 #' 'linear' (default) or 'spline'.
+#' @param log A logical value. Should the action and results be logged?
+#' @param log_file A character string specifying the path to the log file.
 #'
 #' @details Returns a vector equal in length to \code{x}, with all missing data
 #' points interpolated according to the specified method.
@@ -35,7 +37,8 @@
 #'  geom_point(aes(y = pupil_left))
 #'
 #' @export
-interpolate_gaps <- function(x, type = "linear", rule = 2, ...) {
+interpolate_gaps <- function(x, type = "linear", rule = 2, log = FALSE,
+  log_file = NULL, ...) {
 
   # Check whether x is numeric
   if(!is.numeric(x)) {
@@ -47,6 +50,8 @@ interpolate_gaps <- function(x, type = "linear", rule = 2, ...) {
     return(x)
   }
 
+  #TODO: Check what happens if there are not enough observations
+
   # Check if a supported type of interpolation is requested
   if (type != "linear" & type != "spline") {
     stop("Method must be 'linear' or 'spline'.")
@@ -57,15 +62,32 @@ interpolate_gaps <- function(x, type = "linear", rule = 2, ...) {
   i <- 1:n
   NAs <- is.na(x)
 
-  if(type == "linear") {
+  if (type == "linear") {
     res <- stats::approx(x = i[!NAs], y = x[!NAs], 1:n, rule = rule, ...)$y
   }
-  else if(type == "spline") {
+  else if (type == "spline") {
     res <- stats::spline(x = i[!NAs], y = x[!NAs], n = n, ...)$y
   }
 
   # Merge interpolated values back into the original vector
   x[NAs] <- res[NAs]
+
+  # Log
+  if (log) {
+    # Find the log file if it is not specified
+    if (is.null(log_file)) {
+      log_file <- find_log()
+    }
+
+    # Log the smooth step
+    if (type == "linear") {
+      text <- paste0("Applied linear interpolation")
+    } else {
+      text <- "Applied spline interpolation"
+    }
+
+    write(text, file = log_file, append = TRUE)
+  }
 
   return(x)
 }

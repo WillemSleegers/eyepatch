@@ -32,46 +32,26 @@ describe_gaps <- function(data, time, ...) {
   time <- dplyr::enquo(time)
   vars <- dplyr::enquos(...)
 
-  # Check whether data is indeed a data frame
-  if (!"data.frame" %in% class(gaps)) {
-    stop("data is not a data frame.")
-  }
-
-  # Check whether any vars have been provided
-  if (length(vars) == 0) {
-    stop("No variables found; please specify one more numeric variables.")
-  }
-
-  # Check whether the time and vars are numeric
-  if (!is.numeric(dplyr::pull(data, !!time))) {
-    print("time is not numeric.")
-  }
-
-  if (ncol(dplyr::select_if(dplyr::select(data, !!!vars), is.numeric)) !=
-      length(vars)) {
-    stop("Variables contain unsupported variable type")
-  }
-
   output <- tibble::tibble()
 
   # Calculate gap descriptives
   for (var in vars) {
-    descriptives <- data %>%
+    gaps <- data %>%
       dplyr::mutate(
         gap := dplyr::if_else(is.na(!!var) & !is.na(lag(!!var)), 1, 0),
         gap := dplyr::if_else(is.na(!!var), cumsum(gap), NA_real_)
       ) %>%
       dplyr::group_by(gap, add = TRUE) %>%
       dplyr::summarize(
-        start = min(time),
-        end = max(time),
+        start = min(!!time),
+        end = max(!!time),
         duration = end - start
       ) %>%
       dplyr::filter(!is.na(gap)) %>%
       dplyr::mutate(var = quo_name(var)) %>%
       dplyr::select(var, everything())
 
-    output <- dplyr::bind_rows(output, descriptives)
+    output <- dplyr::bind_rows(output, gaps)
   }
 
   # Ungroup the output data frame
