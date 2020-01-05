@@ -63,7 +63,7 @@ create_log <- function(location = NULL, file_name = NULL,
     }
 
     file.create(file_path)
-    print(paste("Created", file_path))
+    message(paste("Created", file_path))
 
     # Add setup information
     write("# Pupil preprocessing log", file = file_path, append = TRUE)
