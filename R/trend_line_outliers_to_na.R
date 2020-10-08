@@ -1,26 +1,22 @@
-#' Set dilation speed outliers to missing.
+#' Trend line outliers to missing.
 #'
-#' \code{dilation_speed_outliers_to_na} calculates the dilation speed based on
-#' timestamps and pupil size measurements and then sets outliers to missing
-#' (NA).
+#' \code{trend_line_outliers_to_na} determines outliers based on deviations from
+#' a smooth trend line and sets the outliers to missing (NA).
 #'
 #' @param pupil A numeric vector of pupil size measurements.
 #' @param time A vector containing the timestamps associated with the
 #' pupil size measurements.
-
+#' @param span A numeric value specifying the amount of smoothing.
 #' @param constant A numeric value specifying the threshold for outlier removal.
 #' @param log A logical value. Should the action and results be logged?
 #' @param log_file A character string specifying the path to the log file.
-#'
-#' @details The exact method of calculating the dilation speed is taken from
-#' Kret & Sjak-Shie (2018).
 #'
 #' @examples
 #' library(dplyr)
 #'
 #' blink <- mutate(blink,
-#'     pupil_left = dilation_speed_outliers_to_na(pupil_left, timestamp),
-#'     pupil_right = dilation_speed_outliers_to_na(pupil_right, timestamp)
+#'     pupil_left = trend_line_outliers_to_na(pupil_left, timestamp),
+#'     pupil_right = trend_line_outliers_to_na(pupil_right, timestamp)
 #'   )
 #'
 #' @importFrom magrittr %>%
@@ -30,7 +26,7 @@
 
 #TODO: Check if dilation speed outliers remove observations surrounding gaps
 
-dilation_speed_outliers_to_na <- function(pupil, time, constant = 10,
+trend_line_outliers_to_na <- function(pupil, time, span = 0.1, constant = 10,
   grouping = NULL, log = FALSE, log_file = NULL) {
 
   # Combine the time and the pupil measurements into a data frame
@@ -44,7 +40,7 @@ dilation_speed_outliers_to_na <- function(pupil, time, constant = 10,
 
     if (is.list(grouping)) {
 
-      df <- bind_cols(df, bind_cols(grouping))
+      df <- bind_cols(df, bind_cols(grouping, .name_repair = "unique"))
       df <- group_by_at(df, vars(-pupil, -time))
 
     } else {
@@ -57,20 +53,17 @@ dilation_speed_outliers_to_na <- function(pupil, time, constant = 10,
     }
   }
 
-  # Fill missing pupil values with last known value
-  df <- tidyr::fill(df, pupil)
+  # Perform a loess smoothing
+  df <- df %>%
+    nest() %>%
+    mutate(model = data %>% map(~loess(pupil ~ time, data = .,
+      span = span))) %>%
+    mutate(fit = map2(model, data, predict)) %>%
+    select(-model) %>%
+    unnest(c(fit, data))
 
-  # Calculate dilation speeds
-  df <- dplyr::mutate(df,
-    d1 = abs((pupil - dplyr::lag(pupil)) / (time - dplyr::lag(time))),
-    d2 = abs((dplyr::lead(pupil) - pupil) / (dplyr::lead(time) - time)),
-    d = dplyr::case_when(
-      is.na(d1) ~ d2,
-      is.na(d2) ~ d1,
-      d1 > d2 ~ d1,
-      TRUE ~ d2
-    )
-  )
+  # Calculate absolute deviations
+  df <- dplyr::mutate(df, d = abs(pupil - fit))
 
   x <- dplyr::pull(df, d)
 
@@ -100,4 +93,3 @@ dilation_speed_outliers_to_na <- function(pupil, time, constant = 10,
 
   return(output)
 }
-

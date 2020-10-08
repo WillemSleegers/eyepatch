@@ -1,6 +1,6 @@
-#' Set invalid measures to missing
+#' Set invalid pupil measures to missing
 #'
-#' \code{invalid_to_na} sets invalid measures to missing (NA).
+#' \code{invalid_to_na} sets invalid pupil measures to missing (NA).
 #'
 #' @param pupil A numeric vector containing pupil data.
 #' @param condition A condition to determine which values should be set to NA.

@@ -8,9 +8,6 @@
 #'
 #' @examples
 #'
-#' @importFrom signal butter
-#' @importFrom signal filtfilt
-#'
 #' @export
 baseline_control <- function(pupil, time, baseline_period, grouping = NULL,
   log = FALSE, log_file = NULL) {

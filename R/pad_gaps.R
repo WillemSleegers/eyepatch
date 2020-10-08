@@ -13,9 +13,6 @@
 #' @param log A logical value. Should the action and results be logged?
 #' @param log_file A character string specifying the path to the log file.
 #'
-#' @details The exact method of calculating the dilation speed is taken from
-#' Kret & Sjak-Shie (2018).
-#'
 #' @examples
 #' library(dplyr)
 #'

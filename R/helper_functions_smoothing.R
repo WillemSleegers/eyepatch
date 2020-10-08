@@ -30,6 +30,8 @@ low_pass_filter <- function(pupil, frequency, sampling_rate, padding) {
   )
 
   # Create a new df that does not contain any missing observations
+  warning("Missing data found.")
+  # TODO: Find a better solution for this, compare it with how other packages do this
   df_complete <- dplyr::filter(df, !is.na(pupil))
 
   # Pad the data frame with the first and last pupil observations to prevent
@@ -55,5 +57,11 @@ low_pass_filter <- function(pupil, frequency, sampling_rate, padding) {
 
   # Return output
   return(pull(df, pupil_filtered))
+}
+
+filtfilt_with_init <- function(filt, a, x, init)  {
+    y = filter(filt, a, c(x, numeric(2 * max(length(a), length(filt)))), init=init)
+    y = rev(filter(filt, a, rev(y)))[seq_along(x)]
+    y
 }
 

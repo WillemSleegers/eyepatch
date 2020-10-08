@@ -35,10 +35,6 @@ padded before a gap}
 \description{
 \code{pad_gaps} removes samples that border certain gaps in the data.
 }
-\details{
-The exact method of calculating the dilation speed is taken from
-Kret & Sjak-Shie (2018).
-}
 \examples{
 library(dplyr)
 

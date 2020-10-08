@@ -50,7 +50,15 @@ interpolate_gaps <- function(x, type = "linear", rule = 2, log = FALSE,
     return(x)
   }
 
-  #TODO: Check what happens if there are not enough observations
+  # Check if there are only missing values, if so, end the function
+  if (sum(is.na(x)) == length(x)) {
+    return(x)
+  }
+
+  # Check if there is only one non-missing value
+  if (sum(is.na(x)) == length(x) - 1) {
+    return(x)
+  }
 
   # Check if a supported type of interpolation is requested
   if (type != "linear" & type != "spline") {

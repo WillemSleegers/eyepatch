@@ -22,7 +22,7 @@ describe_validity <- function(data, ..., log = TRUE) {
   vars <- dplyr::enquos(...)
 
   # Check whether data is indeed a data frame
-  if (!"data.frame" %in% class(gaps)) {
+  if (!"data.frame" %in% class(data)) {
     stop("data is not a data frame.")
   }
 
