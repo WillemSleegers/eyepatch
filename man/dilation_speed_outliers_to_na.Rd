@@ -4,14 +4,7 @@
 \alias{dilation_speed_outliers_to_na}
 \title{Set dilation speed outliers to missing.}
 \usage{
-dilation_speed_outliers_to_na(
-  pupil,
-  time,
-  constant = 10,
-  grouping = NULL,
-  log = FALSE,
-  log_file = NULL
-)
+dilation_speed_outliers_to_na(pupil, time, constant = 10, log = FALSE)
 }
 \arguments{
 \item{pupil}{A numeric vector of pupil size measurements.}

@@ -9,7 +9,6 @@ sparse_to_na(
   time,
   gap_criterion = 40,
   cluster_criterion = 50,
-  grouping = NULL,
   log = FALSE,
   log_file = NULL
 )
@@ -26,8 +25,6 @@ potential sparse observations.}
 \item{cluster_criterion}{A numeric value specifying the section duration of
 sparse value that should be removed.}
 
-\item{grouping}{A vector containing grouping information}
-
 \item{log}{A logical value. Should the action and results be logged?}
 
 \item{log_file}{A character string specifying the path to the log file.}
@@ -40,9 +37,9 @@ library(dplyr)
 
 gaps <- mutate(gaps,
   pupil_left_clean = sparse_to_na(pupil_left, timestamp,
-    first_criterion = 9, second_criterion = 11),
+    gap_criterion = 9, cluster_criterion = 11),
   pupil_right_clean = sparse_to_na(pupil_right, timestamp,
-    first_criterion = 9, second_criterion = 11),
+    gap_criterion = 9, cluster_criterion = 11),
   )
 
 ggplot(gaps, aes(x = timestamp)) +

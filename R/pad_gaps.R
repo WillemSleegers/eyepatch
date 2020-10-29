@@ -31,7 +31,8 @@
 #'
 #' @export
 pad_gaps <- function(pupil, time, gap_minimum = 75, padding_before = 50,
-  padding_after = 50, grouping = NULL, log = FALSE, log_file = NULL) {
+  padding_after = 50, log = FALSE, log_file = NULL) {
+  #TODO: Add a single padding argument, rather than both a before and after
 
   # Check arguments
   if (length(time) == 0) {
@@ -55,43 +56,26 @@ pad_gaps <- function(pupil, time, gap_minimum = 75, padding_before = 50,
   }
 
   # Combine the timestamps and the pupil measurements into a data frame
+  #TODO: Maybe don't do this with data frames, because it's pretty slow
   df <- tibble(
     time = time,
     pupil = pupil
   )
 
-  # Check whether grouping information has been provided
-  if (!is.null(grouping)) {
-
-    if (is.list(grouping)) {
-
-      df <- bind_cols(df, bind_cols(grouping))
-      df <- group_by_at(df, vars(-pupil, -time))
-
-    } else {
-      if (length(grouping) != nrow(df)) {
-        stop("Grouping length is not equal to the length of pupil observations")
-      } else {
-        df <- bind_cols(df, tibble(group = grouping))
-        df <- group_by(df, group)
-      }
-    }
-  }
-
   # Determine gap information
   df <- df %>%
     mutate(
-      gap = if_else(is.na(pupil), 1, 0),
-      gap = if_else(gap == 1 & lag(gap, default = 0) == 0, 1, 0),
-      gap = if_else(is.na(pupil), cumsum(gap), NA_real_)
+      gap = ifelse(is.na(pupil), 1, 0),
+      gap = ifelse(gap == 1 & lag(gap, default = 0) == 0, 1, 0),
+      gap = ifelse(is.na(pupil), cumsum(gap), NA)
     ) %>%
-    group_by(gap, add = TRUE) %>%
+    group_by(gap) %>%
     mutate(
       gap_start = ifelse(!is.na(gap), min(time), NA),
       gap_end = ifelse(!is.na(gap), max(time), NA),
       gap_duration = gap_end - gap_start
     ) %>%
-    group_by_at(vars(-time, -pupil, -gap, -gap_start, -gap_end, -gap_duration))
+    ungroup()
 
   # Filter out gaps that are too small
   df <- df %>%
@@ -102,44 +86,45 @@ pad_gaps <- function(pupil, time, gap_minimum = 75, padding_before = 50,
     )
 
   # Check if there are any gaps remaining
-  if (length(unique(df$gap)) == 1) {
+  if (length(unique(pull(df, gap))) == 1) {
     return(pull(df, pupil))
     #TODO: Log that no gaps were found
   }
 
   # Pad gaps before the gap
   if (padding_before) {
-    df <- df %>%
-      mutate(
-        gap_before = if_else(is.na(gap) & !is.na(lag(gap)), 1, 0),
-        gap_before = cumsum(gap_before)
-      ) %>%
-      group_by(gap_before, add = TRUE) %>%
-      mutate(
-        time_before = min(gap_start, na.rm = TRUE),
-        pupil = if_else(time >= time_before - padding_before,
-          NA_real_, pupil)
-      ) %>%
-      group_by_at(vars(-time, -pupil, -gap, -gap_start, -gap_end,
-        -gap_duration, -gap_before, -time_before)) %>%
-      select(-gap_before, -time_before)
+    suppressWarnings(
+      df <- df %>%
+        mutate(
+          gap_before = ifelse(is.na(gap) & !is.na(dplyr::lag(gap)), 1, 0),
+          gap_before = cumsum(gap_before)
+        ) %>%
+        group_by(gap_before) %>%
+        mutate(
+          time_before = min(gap_start, na.rm = TRUE),
+          pupil = ifelse(time >= time_before - padding_before,
+            NA, pupil)
+        ) %>%
+        ungroup()
+    )
   }
 
   # Pad gaps after the gap
   if (padding_after) {
-    df <- df %>%
-      mutate(
-        gap_after = if_else(!is.na(gap) & is.na(lag(gap)), 1, 0),
-        gap_after = cumsum(gap_after)
-      ) %>%
-      group_by(gap_after, add = TRUE) %>%
-      mutate(
-        time_after = max(gap_end, na.rm = TRUE),
-        pupil = if_else(time <= time_after + padding_before,
-          NA_real_, pupil)
-      ) %>%
-      ungroup() %>%
-      select(-gap_after, -time_after)
+    suppressWarnings(
+      df <- df %>%
+        mutate(
+          gap_after = ifelse(!is.na(gap) & is.na(lag(gap)), 1, 0),
+          gap_after = cumsum(gap_after)
+        ) %>%
+        group_by(gap_after) %>%
+        mutate(
+          time_after = max(gap_end, na.rm = TRUE),
+          pupil = ifelse(time <= time_after + padding_before,
+            NA, pupil)
+        ) %>%
+        ungroup()
+    )
   }
 
   output <- pull(df, pupil)

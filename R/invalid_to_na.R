@@ -9,24 +9,38 @@
 #'
 #' @examples
 #'
+#' # Example 1: Simple vector
 #' # Set 4 to missing in a vector from 1 to 10
 #' invalid_to_na(1:10, 1:10 == 4)
 #'
-#' # Set all pupil sizes with a value of -1 to NA
-#' invalid %>%
-#'   mutate(
-#'     pupil_left = invalid_to_na(pupil_left, pupil_left == -1),
-#'     pupil_right = invalid_to_na(pupil_right, pupil_right == -1)
+#' # Example 2: Simple data
+#' data <- tibble::tibble(
+#'     pupil_left = c(3.15, 3.14, 3.13, -1, -1, 3.11),
+#'     pupil_right = c(2.92, 2.89, 2.93, -1, -1, 2.97),
+#'     validity_left = c(0, 0, 0, 4, 4, 0),
+#'     validity_right = c(0, 0, 0, 4, 4, 0)
 #'   )
+#' head(data)
+#'
+#' # Set all pupil sizes with a value of -1 to NA
+#' dplyr::mutate(data,
+#'   pupil_left = invalid_to_na(pupil_left, pupil_left == -1),
+#'   pupil_right = invalid_to_na(pupil_right, pupil_right == -1)
+#' )
 #'
 #' # Or, set pupil sizes to NA based on a validity score
+#' dplyr::mutate(data,
+#'   pupil_left = invalid_to_na(pupil_left, validity_left == 4),
+#'   pupil_right = invalid_to_na(pupil_right, validity_right == 4)
+#' )
 #'
-#' invalid %>%
-#'   mutate(
-#'     pupil_left = invalid_to_na(pupil_left, validity_left == 4),
-#'     pupil_right = invalid_to_na(pupil_right, validity_right == 4)
-#'   )
+#' # Example 3: Realistic data
+#' # Inspect data
+#' dplyr::count(trial1, validity_left, validity_right)
 #'
+#' # Set invalid pupil observations of the left eye to NA
+#' trial1 <- dplyr::mutate(trial1, pupil_left = invalid_to_na(pupil_left,
+#'   validity_left == 4))
 #'
 #' @export
 invalid_to_na <- function(pupil, condition, log = FALSE, log_file = NULL) {

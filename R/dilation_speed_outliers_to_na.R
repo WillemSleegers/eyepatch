@@ -31,31 +31,13 @@
 #TODO: Check if dilation speed outliers remove observations surrounding gaps
 
 dilation_speed_outliers_to_na <- function(pupil, time, constant = 10,
-  grouping = NULL, log = FALSE, log_file = NULL) {
+  log = FALSE) {
 
   # Combine the time and the pupil measurements into a data frame
   df <- tibble::tibble(
     time = time,
     pupil = pupil
   )
-
-  # Check whether grouping information has been provided
-  if (!is.null(grouping)) {
-
-    if (is.list(grouping)) {
-
-      df <- bind_cols(df, bind_cols(grouping))
-      df <- group_by_at(df, vars(-pupil, -time))
-
-    } else {
-      if (length(grouping) != nrow(df)) {
-        stop("Grouping length is not equal to the length of pupil observations")
-      } else {
-        df <- bind_cols(df, tibble(group = grouping))
-        df <- group_by(df, group)
-      }
-    }
-  }
 
   # Fill missing pupil values with last known value
   df <- tidyr::fill(df, pupil)
@@ -82,11 +64,6 @@ dilation_speed_outliers_to_na <- function(pupil, time, constant = 10,
 
   # Log
   if (log) {
-    # Find the log file if it is not specified
-    if (is.null(log_file)) {
-      log_file <- find_log()
-    }
-
     # Determine values to report
     n <- length(pupil[!is.na(pupil)])
     missing <- sum(is.na(output)) - sum(is.na(pupil))
@@ -95,7 +72,6 @@ dilation_speed_outliers_to_na <- function(pupil, time, constant = 10,
     text <- paste0("Removed ", missing, " outliers (", missing_pct,
       "%) from '", deparse(substitute(pupil)), "' based on dilation speed",
       " (constant = ", constant, ")")
-    write(text, file = log_file, append = TRUE)
   }
 
   return(output)

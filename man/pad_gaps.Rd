@@ -10,7 +10,6 @@ pad_gaps(
   gap_minimum = 75,
   padding_before = 50,
   padding_after = 50,
-  grouping = NULL,
   log = FALSE,
   log_file = NULL
 )
@@ -26,11 +25,11 @@ pupil size measurements.}
 \item{padding_before}{A numeric value describing by how much gaps should be
 padded before a gap}
 
-\item{grouping}{A vector containing grouping information}
-
 \item{log}{A logical value. Should the action and results be logged?}
 
 \item{log_file}{A character string specifying the path to the log file.}
+
+\item{grouping}{A vector containing grouping information}
 }
 \description{
 \code{pad_gaps} removes samples that border certain gaps in the data.

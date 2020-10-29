@@ -19,59 +19,41 @@
 #'     pupil_right = trend_line_outliers_to_na(pupil_right, timestamp)
 #'   )
 #'
-#' @importFrom magrittr %>%
-#'
 #' @export
-#'
+trend_line_outliers_to_na <- function(pupil, time = NULL, constant = 10,
+    method = "low pass", sampling_frequency = 60, cutoff_frequency = 10,
+    padding = 50, interpolation = "linear", log = FALSE,
+    log_file = NULL
+  ) {
 
-#TODO: Check if dilation speed outliers remove observations surrounding gaps
+  # Smoothen the pupil data
+  if (method == "low pass") {
+    # Check if there are missing values
+    if (sum(is.na(pupil)) > 0) {
+      pupil_smooth <- interpolate_gaps(pupil, type = interpolation)
 
-trend_line_outliers_to_na <- function(pupil, time, span = 0.1, constant = 10,
-  grouping = NULL, log = FALSE, log_file = NULL) {
-
-  # Combine the time and the pupil measurements into a data frame
-  df <- tibble::tibble(
-    time = time,
-    pupil = pupil
-  )
-
-  # Check whether grouping information has been provided
-  if (!is.null(grouping)) {
-
-    if (is.list(grouping)) {
-
-      df <- bind_cols(df, bind_cols(grouping, .name_repair = "unique"))
-      df <- group_by_at(df, vars(-pupil, -time))
-
-    } else {
-      if (length(grouping) != nrow(df)) {
-        stop("Grouping length is not equal to the length of pupil observations")
-      } else {
-        df <- bind_cols(df, tibble(group = grouping))
-        df <- group_by(df, group)
+      # Check if that worked
+      if (sum(is.na(pupil_smooth)) > 0) {
+        warning("Missing data could not be interpolated; no outliers were removed.")
+        return(pupil)
       }
+    } else {
+      pupil_smooth <- pupil
     }
+
+    pupil_smooth <- smoothen(pupil_smooth, method = "low pass",
+      sampling_frequency = sampling_frequency,
+      cutoff_frequency = cutoff_frequency, padding = padding)
   }
 
-  # Perform a loess smoothing
-  df <- df %>%
-    nest() %>%
-    mutate(model = data %>% map(~loess(pupil ~ time, data = .,
-      span = span))) %>%
-    mutate(fit = map2(model, data, predict)) %>%
-    select(-model) %>%
-    unnest(c(fit, data))
-
   # Calculate absolute deviations
-  df <- dplyr::mutate(df, d = abs(pupil - fit))
-
-  x <- dplyr::pull(df, d)
+  d <- abs(pupil - pupil_smooth)
 
   # Determine cut-off threshold
-  MAD <- median(abs(x - median(x, na.rm = TRUE)), na.rm = TRUE)
-  threshold <- median(x, na.rm = TRUE) + constant * MAD
+  MAD <- median(abs(d - median(d, na.rm = TRUE)), na.rm = TRUE)
+  threshold <- median(d, na.rm = TRUE) + constant * MAD
 
-  output <- dplyr::if_else(x > threshold, NA_real_, pupil)
+  output <- ifelse(d > threshold, NA, pupil)
 
   # Log
   if (log) {

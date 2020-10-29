@@ -33,10 +33,17 @@
 #'   dplyr::mutate(time = center_time(timestamp, event == "event"))
 #'
 #' # Example 2: Realistic data
+#' # Inspect data
+#' head(trial1)
 #'
+#' # Center time
+#' trial1 <- dplyr::mutate(trial1, time = center_time(timestamp,
+#'   event == "feedback"))
+#'
+#' # Inspect rows where event becomes 'feedback'
+#' dplyr::slice(trial, 58:63)
 #'
 #' @export
-
 center_time <- function(time, condition = NULL) {
 
   # Check whether time is numeric

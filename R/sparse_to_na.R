@@ -9,7 +9,6 @@
 #' potential sparse observations.
 #' @param cluster_criterion A numeric value specifying the section duration of
 #' sparse value that should be removed.
-#' @param grouping A vector containing grouping information
 #' @param log A logical value. Should the action and results be logged?
 #' @param log_file A character string specifying the path to the log file.
 #'
@@ -18,9 +17,9 @@
 #'
 #' gaps <- mutate(gaps,
 #'   pupil_left_clean = sparse_to_na(pupil_left, timestamp,
-#'     first_criterion = 9, second_criterion = 11),
+#'     gap_criterion = 9, cluster_criterion = 11),
 #'   pupil_right_clean = sparse_to_na(pupil_right, timestamp,
-#'     first_criterion = 9, second_criterion = 11),
+#'     gap_criterion = 9, cluster_criterion = 11),
 #'   )
 #'
 #' ggplot(gaps, aes(x = timestamp)) +
@@ -33,7 +32,7 @@
 #'
 #' @export
 sparse_to_na <- function(pupil, time, gap_criterion = 40,
-  cluster_criterion = 50, grouping = NULL, log = FALSE, log_file = NULL) {
+  cluster_criterion = 50, log = FALSE, log_file = NULL) {
 
   # Combine the timestamps and the pupil measurements into a data frame
   df <- tibble(
@@ -41,48 +40,31 @@ sparse_to_na <- function(pupil, time, gap_criterion = 40,
     pupil = pupil
   )
 
-  # Check whether grouping information has been provided
-  if (!is.null(grouping)) {
-
-    if (is.list(grouping)) {
-
-      df <- bind_cols(df, bind_cols(grouping))
-      df <- group_by_at(df, vars(-pupil, -time))
-
-    } else {
-      if (length(grouping) != nrow(df)) {
-        stop("Grouping length is not equal to the length of pupil observations")
-      } else {
-        df <- bind_cols(df, tibble(group = grouping))
-        df <- group_by(df, group)
-      }
-    }
-  }
-
   # Determine sections
-  df <- df %>%
-    mutate(
-      section = ifelse(
-        (is.na(pupil) & !is.na(lag(pupil))) |
-          (!is.na(pupil) & is.na(lag(pupil))), 1, 0),
-      section = cumsum(section)
-    ) %>%
-    group_by(section, add = TRUE) %>%
-    mutate(
-      section_start = ifelse(!is.na(section), min(time), NA),
-      section_end = ifelse(!is.na(section), max(time), NA),
-      section_duration = section_end - section_start
-    ) %>%
-    group_by_at(vars(-time, -pupil, -section, -section_start, -section_end,
-      -section_duration)) %>%
-    mutate(
-      previous_section_duration = ifelse(section != lag(section),
-        lag(section_duration), NA),
-      missing_section = ifelse(is.na(pupil), 1, 0)
-    ) %>%
-    group_by(section, add = TRUE) %>%
-    mutate(previous_section_duration = max(previous_section_duration,
-      na.rm = TRUE))
+  suppressWarnings(
+    df <- df %>%
+      mutate(
+        section = ifelse(
+          (is.na(pupil) & !is.na(lag(pupil))) |
+            (!is.na(pupil) & is.na(lag(pupil))), 1, 0),
+        section = cumsum(section)
+      ) %>%
+      group_by(section) %>%
+      mutate(
+        section_start = ifelse(!is.na(section), min(time), NA),
+        section_end = ifelse(!is.na(section), max(time), NA),
+        section_duration = section_end - section_start
+      ) %>%
+      ungroup() %>%
+      mutate(
+        previous_section_duration = ifelse(section != lag(section),
+          lag(section_duration), NA),
+        missing_section = ifelse(is.na(pupil), 1, 0)
+      ) %>%
+      group_by(section) %>%
+      mutate(previous_section_duration = max(previous_section_duration,
+        na.rm = TRUE))
+  )
 
   # Filter out sparse sections
   df <- df %>%

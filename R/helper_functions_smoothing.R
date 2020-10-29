@@ -1,3 +1,32 @@
+low_pass_filter <- function(pupil, cutoff_frequency, sampling_frequency,
+    padding) {
+
+  # Check if there are missing data points
+  if (sum(is.na(pupil)) > 1) {
+    warning("Missing data found; returning unsmoothened data.")
+    return(pupil)
+  }
+
+  # Pad the pupil data with the first and last pupil observations to prevent
+  # artifacts at the start and end caused by applying the low pass filter
+  pupil <- c(rep(first(pupil), padding), pupil, rep(last(pupil), padding))
+
+  # Determine critical frequencies as required by signal::filtfilt()
+  W <- cutoff_frequency / (sampling_frequency / 2)
+
+  # Generate a Butterworth filter
+  filt <- signal::butter(1, W, type = "low")
+
+  # Apply low pass filter
+  pupil_smooth <- signal::filtfilt(filt, pupil)
+
+  # Remove padding
+  pupil_smooth <- pupil_smooth[(padding + 1):(length(pupil_smooth) - padding)]
+
+  # Return output
+  return(pupil_smooth)
+}
+
 fit_loess <- function(x, y, span) {
   tryCatch(
     {
@@ -20,44 +49,6 @@ fit_loess <- function(x, y, span) {
   )
 }
 
-low_pass_filter <- function(pupil, frequency, sampling_rate, padding) {
-
-  # Create a data frame with the pupil observations and a column identifying
-  # each observation
-  df <- tibble::tibble(
-    pupil = pupil,
-    n = 1:length(pupil)
-  )
-
-  # Create a new df that does not contain any missing observations
-  warning("Missing data found.")
-  # TODO: Find a better solution for this, compare it with how other packages do this
-  df_complete <- dplyr::filter(df, !is.na(pupil))
-
-  # Pad the data frame with the first and last pupil observations to prevent
-  # artifacts at the start and end caused by applying the low pass filter
-  df_complete <- dplyr::bind_rows(
-    tibble::tibble(pupil = rep(first(pull(df_complete, pupil)), padding)),
-    df_complete,
-    tibble::tibble(pupil = rep(last(pull(df_complete, pupil)), padding)),
-  )
-
-  # Determine critical frequencies as required by signal::filtfilt()
-  W <- frequency / (sampling_rate / 2)
-
-  # Generate a Butterworth filter
-  filt <- signal::butter(1, W, type = "low")
-
-  # Apply low pass filter
-  df_complete <- mutate(df_complete, pupil_filtered = filtfilt(filt, pupil))
-
-  # Merge the result back to the original pupil observations (including missing
-  # observations)
-  df <- left_join(df, df_complete, by = "n")
-
-  # Return output
-  return(pull(df, pupil_filtered))
-}
 
 filtfilt_with_init <- function(filt, a, x, init)  {
     y = filter(filt, a, c(x, numeric(2 * max(length(a), length(filt)))), init=init)

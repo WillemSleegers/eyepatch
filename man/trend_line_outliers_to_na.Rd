@@ -6,10 +6,13 @@
 \usage{
 trend_line_outliers_to_na(
   pupil,
-  time,
-  span = 0.1,
+  time = NULL,
   constant = 10,
-  grouping = NULL,
+  method = "low pass",
+  sampling_frequency = 60,
+  cutoff_frequency = 10,
+  padding = 50,
+  interpolation = "linear",
   log = FALSE,
   log_file = NULL
 )
@@ -20,13 +23,13 @@ trend_line_outliers_to_na(
 \item{time}{A vector containing the timestamps associated with the
 pupil size measurements.}
 
-\item{span}{A numeric value specifying the amount of smoothing.}
-
 \item{constant}{A numeric value specifying the threshold for outlier removal.}
 
 \item{log}{A logical value. Should the action and results be logged?}
 
 \item{log_file}{A character string specifying the path to the log file.}
+
+\item{span}{A numeric value specifying the amount of smoothing.}
 }
 \description{
 \code{trend_line_outliers_to_na} determines outliers based on deviations from
