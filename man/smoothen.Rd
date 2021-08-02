@@ -2,7 +2,7 @@
 % Please edit documentation in R/smoothen.R
 \name{smoothen}
 \alias{smoothen}
-\title{Smoothen the pupil dilate}
+\title{Smoothen pupil measurements}
 \usage{
 smoothen(
   pupil,
@@ -11,26 +11,18 @@ smoothen(
   sampling_frequency = NULL,
   cutoff_frequency = 10,
   padding = 50,
-  span = 0.2,
-  log = FALSE,
-  log_file = NULL
+  span = 0.2
 )
 }
 \arguments{
 \item{pupil}{A numeric vector containing pupil data.}
 
 \item{method}{The type of interpolation to be used. Possible values are
-'loess' (default) or 'lowpass'.}
-
-\item{log}{A logical value. Should the action and results be logged?}
-
-\item{log_file}{A character string specifying the path to the log file.}
-
-\item{grouping}{A vector containing grouping information}
+'low pass' (default) or 'loess'.}
 }
 \description{
-\code{smoothen} returns a vector of smoothened pupil data according to the
-specified method.
+\code{smoothen} returns a vector of smoothened pupil measurements according
+to the specified method.
 }
 \examples{
 

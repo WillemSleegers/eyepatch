@@ -4,55 +4,75 @@
 \alias{interpolate_gaps}
 \title{Interpolate missing data between gaps}
 \usage{
-interpolate_gaps(
-  x,
-  type = "linear",
-  rule = 2,
-  log = FALSE,
-  log_file = NULL,
-  ...
-)
+interpolate_gaps(pupil, type = "linear", rule = 2, method = "fmm")
 }
 \arguments{
-\item{x}{A numeric vector.}
+\item{pupil}{A numeric vector of pupil size measurements.}
 
 \item{type}{The type of interpolation to be used. Possible values are
-'linear' (default) or 'spline'.}
-
-\item{log}{A logical value. Should the action and results be logged?}
-
-\item{log_file}{A character string specifying the path to the log file.}
+'linear' (default) or 'spline'. Note that the spline interpolation does not
+yet function as intended.}
 }
 \description{
 \code{interpolate_gaps} returns a vector with the (originally) missing data
 points interpolated according to the specified method.
 }
 \details{
-Returns a vector equal in length to \code{x}, with all missing data
-points interpolated according to the specified method.
+Returns a vector equal in length to \code{pupil}, with all missing
+data points interpolated according to the specified method.
 
-See \code{?approx} and \code{?spline} for more available arguments.
-
-Note that the default value for the rule argument in \code{approx()} has
-changed from 1 to 2.
+Note that the default value for the rule argument in \code{approx()} is 2
+rather than 1.
 }
 \examples{
+# Load the "dplyr", "tidyr", and "ggplot2" packages:
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 
-# Linear interpolation
-gaps <- mutate(gaps, pupil_left_LI = interpolate_gaps(pupil_left))
+# Example 1: Artificial data
+# Create some artificial data:
+data <- tibble(
+  time = 1:8,
+  pupil_left = c(3.11, 3.13, NA, NA, NA, NA, NA, 3.12),
+  pupil_right = c(2.92, 2.95, NA, NA, NA, NA, NA, 2.95)
+)
+data
 
-ggplot(gaps, aes(x = timestamp)) +
- geom_point(aes(y = pupil_left_LI), color = "red") +
- geom_point(aes(y = pupil_left))
+# Linearly interpolate values of the left eye:
+mutate(data,
+  pupil_left = interpolate_gaps(pupil_left, type = "linear")
+)
 
-# Spline interpolation
-gaps <- mutate(gaps, pupil_left_spline = interpolate_gaps(pupil_left,
-  type = "spline"))
+# Example 2: Realistic data
+blink
 
-ggplot(gaps, aes(x = timestamp)) +
- geom_point(aes(y = pupil_left_spline), color = "red") +
- geom_point(aes(y = pupil_left))
+# First remove outliers:
+blink <- mutate(blink,
+  pupil_left = dilation_speed_outliers_to_na(pupil_left, timestamp,
+    constant = 10),
+  pupil_right = dilation_speed_outliers_to_na(pupil_right, timestamp,
+    constant = 10)
+)
+
+# Then linearly interpolate gaps in pupil measurements of the left eye and
+# perform a spline interpolation on the right eye:
+blink <- mutate(blink,
+    pupil_left = interpolate_gaps(pupil_left, type = "linear"),
+    pupil_right = interpolate_gaps(pupil_right, type = "spline")
+  )
+
+# Restructure the data and plot the results to compare the pupil measurements
+# before the interpolation and after the interpolation:
+blink \%>\%
+  pivot_longer(
+    cols = starts_with("pupil"),
+    names_to = "pupil",
+    names_pattern = "(left|right)",
+    values_to = "pupil_size"
+ ) \%>\%
+ ggplot(aes(x = timestamp, y = pupil_size)) +
+   geom_point() +
+   facet_wrap(~ pupil)
 
 }

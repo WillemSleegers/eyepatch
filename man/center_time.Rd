@@ -2,55 +2,63 @@
 % Please edit documentation in R/center_time.R
 \name{center_time}
 \alias{center_time}
-\title{Centers time around a specified moment}
+\title{Center time around a specified moment}
 \usage{
 center_time(time, condition = NULL)
 }
 \arguments{
-\item{time}{A vector containing the timestamps.}
+\item{time}{A vector containing timestamps.}
 
-\item{condition}{A condition specifying the onset of the to-be-centered around moment.}
+\item{condition}{An (optional) condition specifying the onset of the moment
+that the timestamps should be centered around.}
 }
 \description{
 \code{center_time} centers time around a specified moment, such as the start
 of a trial or when a particular event occurs.
 }
 \details{
-To center time in multiple trials or in multiple participants, use
-dplyr's \code{group_by}. See the example below.
+To center time in multiple trials and/or for multiple participants,
+use dplyr's \code{group_by}. See below for some examples.
 }
 \examples{
+# Load the "dplyr" package for access to its functions and the "\%>\%" pipe:
+library(dplyr)
 
-# Example 1: Simple data set
-data <- dplyr::tibble(
-  timestamp = 1:30,
-  trial = rep(1:3, each = 10),
-  event = rep(c(rep("baseline", 3), rep("event", 7)), times = 3)
+# Example 1: Artificial data
+# Create some data for this example:
+data <- tibble(
+  timestamp = 1:14,
+  trial = rep(1:2, each = 7),
+  event = rep(c(rep("baseline", 2), rep("event", 5)), times = 2)
 )
+data
 
-# Create a new time column with time centered around the first timestamp
-data <- dplyr::mutate(data, time = center_time(timestamp))
+# Create a new "time" column with the timestamps centered around the first
+# timestamp:
+mutate(data, time = center_time(timestamp))
 
-# More interestingly, center time at the first timestamp of each trial
-data <- data \%>\%
-  dplyr::group_by(trial) \%>\%
-  dplyr::mutate(time = center_time(timestamp))
+# More interestingly, center time at the first timestamp of each trial:
+data \%>\%
+  group_by(trial) \%>\%
+  mutate(time = center_time(timestamp))
 
-# More more interestingly, center time at the start of the event within each
-trial
-data <- data \%>\%
-  dplyr::group_by(trial) \%>\%
-  dplyr::mutate(time = center_time(timestamp, event == "event"))
+# More more interestingly, center time around the moment when an event begins
+# within each trial:
+data \%>\%
+  group_by(trial) \%>\%
+  mutate(time = center_time(timestamp, event == "event"))
 
 # Example 2: Realistic data
-# Inspect data
-head(trial1)
+# Inspect the "trial1" data set:
+trial1
+count(trial1, event)
+slice(trial1, 58:63)
 
-# Center time
-trial1 <- dplyr::mutate(trial1, time = center_time(timestamp,
-  event == "feedback"))
+# Center time around the moment when the 'feedback' event takes place:
+trial1 <- mutate(trial1, time = center_time(timestamp, event == "feedback"))
 
-# Inspect rows where event becomes 'feedback'
-dplyr::slice(trial, 58:63)
+# Inspect the rows where the event goes from 'baseline' to 'event' to
+# verify that the function worked:
+slice(trial1, 58:63)
 
 }

@@ -1,30 +1,48 @@
 
-# Shortcuts ---------------------------------------------------------------
-
-devtools::document()
-devtools::install()
-
 # TODOs -------------------------------------------------------------------
 
-# Check if dilation speed outliers remove observations surrounding gaps
-# Remove grouping after each function
+# - Figure out the best way to do logging
+# - Add examples to create_log()
+# - Check if dilation speed outliers remove observations surrounding gaps
+# - Remove grouping after each function
+# - Check whether missing values should be filled with the last known pupil value
+#   in the dilation speed outlier function
 
-# Creating data files -----------------------------------------------------
+# Update ------------------------------------------------------------------
 
-# Read in data
-trial1 <- readr::read_csv("data/trial1.csv")
+# Update documentation and (re)install the package
+devtools::document()
+devtools::install()
+detach("package:eyepatch", unload = TRUE)
+library(eyepatch)
 
-# Save data
-usethis::use_data(trial1, overwrite = TRUE)
+# Restart sessions --------------------------------------------------------
 
-# Documentation -----------------------------------------------------------
+.rs.restartR()
 
-usethis::use_vignette("introduction", title = "Introduction to eyepatch")
+# Testing -----------------------------------------------------------------
+
+# Add a test
+# usethis::use_test("add_stats")
+
+# Test all tests
+devtools::test()
+
+# Test specific tests
+testthat::test_file("tests/testthat/test_counts.R")
+
+# Create a vignette -------------------------------------------------------
+
+# usethis::use_vignette("read-and-use-a-tidystats-file")
+
+# Add a data set ----------------------------------------------------------
+
+usethis::use_data(sparse, overwrite = TRUE)
 
 # Build website -----------------------------------------------------------
 
 # Run once to configure package to use pkgdown
-usethis::use_pkgdown()
+# usethis::use_pkgdown()
 
 # Run to build the website
 pkgdown::build_site()
@@ -35,19 +53,27 @@ pkgdown::preview_site()
 # Delete website files
 pkgdown::clean_site()
 
+# CRAN submission ---------------------------------------------------------
+
+# Check examples
+devtools::run_examples()
+
+# Check tests
+devtools::test()
+
+# Check package
+# devtools::load_all()
+devtools::check()
+devtools::check(args = c('--run-donttest')) # Without examples test
+devtools::check(args = c('--as-cran'))
+
+# run R CMD check on CRAN’s servers
+devtools::check_win_devel()
+devtools::check_win_release()
+
+# Build tar
+devtools::build()
+
 # Related packages --------------------------------------------------------
 
 # - https://cran.r-project.org/web/packages/PupilPre/index.html
-
-
-library(tidyverse)
-
-ggplot(gaps, aes(x = timestamp, y = pupil_left)) +
-  geom_point()
-
-gaps <- mutate(gaps, pupil_left_clean = pad_gaps(pupil_left, timestamp,
-  gap_minimum = 7, padding_before = 5, padding_after = 5))
-
-ggplot(gaps, aes(x = timestamp)) +
-  geom_point(aes(y = pupil_left), color = "red") +
-  geom_point(aes(y = pupil_left_clean), color = "green")

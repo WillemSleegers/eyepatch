@@ -4,14 +4,7 @@
 \alias{sparse_to_na}
 \title{Sparsity filter}
 \usage{
-sparse_to_na(
-  pupil,
-  time,
-  gap_criterion = 40,
-  cluster_criterion = 50,
-  log = FALSE,
-  log_file = NULL
-)
+sparse_to_na(pupil, time, gap_criterion = 40, cluster_criterion = 50)
 }
 \arguments{
 \item{pupil}{A numeric vector of pupil size measurements.}
@@ -19,33 +12,56 @@ sparse_to_na(
 \item{time}{A vector containing the timestamps associated with the
 pupil size measurements.}
 
-\item{gap_criterion}{A numeric value specifying the gap duration preceding
-potential sparse observations.}
+\item{gap_criterion}{A numeric value specifying the gap duration. Clusters
+that follow a gap of this size or larger will be removed.}
 
-\item{cluster_criterion}{A numeric value specifying the section duration of
-sparse value that should be removed.}
-
-\item{log}{A logical value. Should the action and results be logged?}
-
-\item{log_file}{A character string specifying the path to the log file.}
+\item{cluster_criterion}{A numeric value specifying the cluster duration.
+Clusters smaller than this this value will be removed.}
 }
 \description{
 \code{sparse_to_na} removes sparse samples in the data.
 }
 \examples{
+# Load the "dplyr", "tidyr", and "ggplot2" packages:
 library(dplyr)
+library(tidyr)
+library(ggplot2)
 
-gaps <- mutate(gaps,
-  pupil_left_clean = sparse_to_na(pupil_left, timestamp,
-    gap_criterion = 9, cluster_criterion = 11),
-  pupil_right_clean = sparse_to_na(pupil_right, timestamp,
-    gap_criterion = 9, cluster_criterion = 11),
+# Example 1: Artificial data
+# Create some artificial data:
+data <- tibble(
+  time = 1:8,
+  pupil_left = c(3.11, 3.13, NA, NA, 3.24, NA, NA, 3.12),
+  pupil_right = c(2.92, 2.95, NA, NA, 3.06, NA, NA, 2.95)
+)
+data
+
+# Remove the cluster in the left eye:
+mutate(data,
+  pupil_left = sparse_to_na(pupil_left, time, gap_criterion = 2,
+    cluster_criterion = 1)
+)
+
+# Example 2: Realistic data
+sparse
+
+# Remove a sparse cluster of the left eye:
+sparse <- mutate(sparse,
+  pupil_left_new = sparse_to_na(pupil_left, timestamp, gap_criterion = 10,
+    cluster_criterion = 5)
   )
 
-ggplot(gaps, aes(x = timestamp)) +
-  geom_point(aes(y = pupil_left), color = "red") +
-  geom_point(aes(y = pupil_right), color = "red") +
-  geom_point(aes(y = pupil_left_clean)) +
-  geom_point(aes(y = pupil_right_clean))
+# Restructure the data and plot the results to compare the pupil measurements
+# before and after padding the gaps:
+sparse \%>\%
+  rename(pupil_left_old = pupil_left) \%>\%
+  pivot_longer(
+    cols = c(pupil_left_old, pupil_left_new),
+    names_to = "status",
+    names_pattern = "(old|new)",
+    values_to = "pupil_size"
+ ) \%>\%
+ ggplot(aes(x = timestamp, y = pupil_size, color = status)) +
+   geom_point()
 
 }

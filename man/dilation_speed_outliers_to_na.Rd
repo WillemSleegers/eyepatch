@@ -2,9 +2,9 @@
 % Please edit documentation in R/dilation_speed_outliers_to_na.R
 \name{dilation_speed_outliers_to_na}
 \alias{dilation_speed_outliers_to_na}
-\title{Set dilation speed outliers to missing.}
+\title{Set dilation speed outliers to missing}
 \usage{
-dilation_speed_outliers_to_na(pupil, time, constant = 10, log = FALSE)
+dilation_speed_outliers_to_na(pupil, time, constant = 10)
 }
 \arguments{
 \item{pupil}{A numeric vector of pupil size measurements.}
@@ -12,11 +12,8 @@ dilation_speed_outliers_to_na(pupil, time, constant = 10, log = FALSE)
 \item{time}{A vector containing the timestamps associated with the
 pupil size measurements.}
 
-\item{constant}{A numeric value specifying the threshold for outlier removal.}
-
-\item{log}{A logical value. Should the action and results be logged?}
-
-\item{log_file}{A character string specifying the path to the log file.}
+\item{constant}{A numeric value specifying the threshold for outlier removal.
+The default is 10.}
 }
 \description{
 \code{dilation_speed_outliers_to_na} calculates the dilation speed based on
@@ -28,11 +25,54 @@ The exact method of calculating the dilation speed is taken from
 Kret & Sjak-Shie (2018).
 }
 \examples{
+# Load the "dplyr", "tidyr", and "ggplot2" packages:
 library(dplyr)
+library(tidyr)
+library(ggplot2)
 
+# Example 1: Artificial data
+# Create some artificial data:
+data <- tibble(
+  time = 0:5,
+  pupil_left = c(3.11, 3.13, 3.17, 3.7, 3.16, 3.12),
+  pupil_right = c(2.92, 2.95, 2.99, 3.5, 2.97, 2.95)
+)
+data
+
+# Remove outliers:
+mutate(data,
+  pupil_left = dilation_speed_outliers_to_na(pupil_left, time,
+    constant = 10),
+  pupil_right = dilation_speed_outliers_to_na(pupil_right, time,
+    constant = 10)
+)
+
+Example 2: Realistic data
+blink
+
+# Remove outliers:
 blink <- mutate(blink,
-    pupil_left = dilation_speed_outliers_to_na(pupil_left, timestamp),
-    pupil_right = dilation_speed_outliers_to_na(pupil_right, timestamp)
-  )
+  pupil_left_new = dilation_speed_outliers_to_na(pupil_left, timestamp,
+    constant = 10),
+  pupil_right_new = dilation_speed_outliers_to_na(pupil_right, timestamp,
+    constant = 10)
+)
+
+# Restructure the data and plot the results to compare the pupil measurements
+# before the outlier removal and after the outlier removal:
+blink \%>\%
+  rename(
+    pupil_left_old = pupil_left,
+    pupil_right_old = pupil_right
+  ) \%>\%
+  pivot_longer(
+    cols = starts_with("pupil"),
+    names_to = c("pupil", "status"),
+    names_pattern = "(left|right)_(old|new)",
+    values_to = "pupil_size"
+ ) \%>\%
+ ggplot(aes(x = timestamp, y = pupil_size, color = status)) +
+   geom_point() +
+   facet_wrap(~ pupil)
 
 }

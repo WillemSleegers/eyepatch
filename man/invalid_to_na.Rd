@@ -2,55 +2,59 @@
 % Please edit documentation in R/invalid_to_na.R
 \name{invalid_to_na}
 \alias{invalid_to_na}
-\title{Set invalid pupil measures to missing}
+\title{Set invalid pupil measurements to missing}
 \usage{
-invalid_to_na(pupil, condition, log = FALSE, log_file = NULL)
+invalid_to_na(pupil, condition)
 }
 \arguments{
 \item{pupil}{A numeric vector containing pupil data.}
 
 \item{condition}{A condition to determine which values should be set to NA.}
-
-\item{log}{A logical value. Should the action and results be logged?}
-
-\item{log_file}{A character string specifying the path to the log file.}
 }
 \description{
-\code{invalid_to_na} sets invalid pupil measures to missing (NA).
+\code{invalid_to_na} sets invalid pupil measurements to missing (NA).
 }
 \examples{
-
-# Example 1: Simple vector
-# Set 4 to missing in a vector from 1 to 10
+# Example 1: Artificial vector
+# Set the value '4' to missing in a vector from '1' to '10':
 invalid_to_na(1:10, 1:10 == 4)
 
-# Example 2: Simple data
-data <- tibble::tibble(
-    pupil_left = c(3.15, 3.14, 3.13, -1, -1, 3.11),
-    pupil_right = c(2.92, 2.89, 2.93, -1, -1, 2.97),
-    validity_left = c(0, 0, 0, 4, 4, 0),
-    validity_right = c(0, 0, 0, 4, 4, 0)
-  )
-head(data)
+# Example 2: Artificial data
+# Load the "dplyr" package:
+library(dplyr)
 
-# Set all pupil sizes with a value of -1 to NA
-dplyr::mutate(data,
+# Create some artificial data:
+data <- tibble(
+  pupil_left = c(3.15, 3.14, 3.13, -1, -1, 3.11),
+  pupil_right = c(2.92, 2.89, 2.93, -1, -1, 2.97),
+  validity_left = c(0, 0, 0, 4, 4, 0),
+  validity_right = c(0, 0, 0, 4, 4, 0)
+)
+data
+
+# Set all pupil sizes with a value of -1 to NA:
+mutate(data,
   pupil_left = invalid_to_na(pupil_left, pupil_left == -1),
   pupil_right = invalid_to_na(pupil_right, pupil_right == -1)
 )
 
-# Or, set pupil sizes to NA based on a validity score
-dplyr::mutate(data,
+# Or, set pupil sizes to NA based on values in the validity columns:
+mutate(data,
   pupil_left = invalid_to_na(pupil_left, validity_left == 4),
   pupil_right = invalid_to_na(pupil_right, validity_right == 4)
 )
 
 # Example 3: Realistic data
-# Inspect data
-dplyr::count(trial1, validity_left, validity_right)
+# Inspect data:
+trial1
+count(trial1, validity_left, validity_right)
+slice(trial1, 100:115)
 
-# Set invalid pupil observations of the left eye to NA
-trial1 <- dplyr::mutate(trial1, pupil_left = invalid_to_na(pupil_left,
+# Set invalid pupil observations of the left eye to NA:
+trial1 <- mutate(trial1, pupil_left = invalid_to_na(pupil_left,
   validity_left == 4))
+
+# Inspect the data frame again to see whether it worked:
+slice(trial1, 100:115)
 
 }

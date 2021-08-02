@@ -8,10 +8,9 @@ pad_gaps(
   pupil,
   time,
   gap_minimum = 75,
-  padding_before = 50,
-  padding_after = 50,
-  log = FALSE,
-  log_file = NULL
+  padding = 50,
+  padding_before = NULL,
+  padding_after = NULL
 )
 }
 \arguments{
@@ -20,32 +19,59 @@ pad_gaps(
 \item{time}{A vector containing the timestamps associated with the
 pupil size measurements.}
 
-\item{gap_minimum}{A numeric value describing the minimum gap duration}
+\item{gap_minimum}{A numeric value describing the minimum gap duration.}
+
+\item{padding}{A numeric value describing by how much gaps should be padded.}
 
 \item{padding_before}{A numeric value describing by how much gaps should be
-padded before a gap}
+padded before a gap.}
 
-\item{log}{A logical value. Should the action and results be logged?}
-
-\item{log_file}{A character string specifying the path to the log file.}
-
-\item{grouping}{A vector containing grouping information}
+\item{padding_after}{A numeric value describing by how much gaps should be
+padded after a gap.}
 }
 \description{
-\code{pad_gaps} removes samples that border certain gaps in the data.
+\code{pad_gaps} removes pupil size measurements that border gaps in the data.
 }
 \examples{
+# Load the "dplyr", "tidyr", and "ggplot2" packages:
 library(dplyr)
+library(tidyr)
+library(ggplot2)
 
+# Example 1: Artificial data
+# Create some artificial data:
+data <- tibble(
+  time = 1:8,
+  pupil_left = c(3.11, 3.13, 3.16, NA, NA, NA, 3.16, 3.12),
+  pupil_right = c(2.92, 2.95, 2.98, NA, NA, NA, 2.97, 2.95)
+)
+data
+
+# Pad gaps of the left eye:
+mutate(data,
+  pupil_left = pad_gaps(pupil_left, time, gap_minimum = 1, padding = 1)
+)
+
+# Example 2: Realistic data
+gaps
+
+# Pad gaps of the left eye:
 gaps <- mutate(gaps,
-  pupil_left_padded = pad_gaps(pupil_left, timestamp, gap_minimum = 10,
-    padding_before = 4, padding_after = 4),
-  pupil_right_padded = pad_gaps(pupil_right, timestamp, gap_minimum = 10,
-    padding_before = 4, padding_after = 4)
+  pupil_left_new = pad_gaps(pupil_left, timestamp, gap_minimum = 10,
+    padding = 4)
   )
 
-ggplot(gaps, aes(x = timestamp)) +
-  geom_point(aes(y = pupil_left), color = "red") +
-  geom_point(aes(y = pupil_left_padded))
+# Restructure the data and plot the results to compare the pupil measurements
+# before and after padding the gaps:
+gaps \%>\%
+  rename(pupil_left_old = pupil_left) \%>\%
+  pivot_longer(
+    cols = c(pupil_left_old, pupil_left_new),
+    names_to = "status",
+    names_pattern = "(old|new)",
+    values_to = "pupil_size"
+ ) \%>\%
+ ggplot(aes(x = timestamp, y = pupil_size, color = status)) +
+   geom_point()
 
 }

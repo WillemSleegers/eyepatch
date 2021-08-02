@@ -4,14 +4,7 @@
 \alias{baseline_control}
 \title{Control for baseline differences}
 \usage{
-baseline_control(
-  pupil,
-  time,
-  baseline_period,
-  grouping = NULL,
-  log = FALSE,
-  log_file = NULL
-)
+baseline_control(pupil, time, baseline_period, grouping = NULL, log = NULL)
 }
 \arguments{
 \item{pupil}{A numeric vector containing pupil data.}

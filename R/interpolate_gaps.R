@@ -3,99 +3,118 @@
 #' \code{interpolate_gaps} returns a vector with the (originally) missing data
 #' points interpolated according to the specified method.
 #'
-#' @param x A numeric vector.
+#' @param pupil A numeric vector of pupil size measurements.
 #' @param type The type of interpolation to be used. Possible values are
-#' 'linear' (default) or 'spline'.
-#' @param log A logical value. Should the action and results be logged?
-#' @param log_file A character string specifying the path to the log file.
+#' 'linear' (default) or 'spline'. Note that the spline interpolation does not
+#' yet function as intended.
 #'
-#' @details Returns a vector equal in length to \code{x}, with all missing data
-#' points interpolated according to the specified method.
+#' @details Returns a vector equal in length to \code{pupil}, with all missing
+#' data points interpolated according to the specified method.
 #'
-#' See \code{?approx} and \code{?spline} for more available arguments.
-#'
-#' Note that the default value for the rule argument in \code{approx()} has
-#' changed from 1 to 2.
+#' Note that the default value for the rule argument in \code{approx()} is 2
+#' rather than 1.
 #'
 #' @examples
+#' # Load the "dplyr", "tidyr", and "ggplot2" packages:
 #' library(dplyr)
+#' library(tidyr)
 #' library(ggplot2)
 #'
-#' # Linear interpolation
-#' gaps <- mutate(gaps, pupil_left_LI = interpolate_gaps(pupil_left))
+#' # Example 1: Artificial data
+#' # Create some artificial data:
+#' data <- tibble(
+#'   time = 1:8,
+#'   pupil_left = c(3.11, 3.13, NA, NA, NA, NA, NA, 3.12),
+#'   pupil_right = c(2.92, 2.95, NA, NA, NA, NA, NA, 2.95)
+#' )
+#' data
 #'
-#' ggplot(gaps, aes(x = timestamp)) +
-#'  geom_point(aes(y = pupil_left_LI), color = "red") +
-#'  geom_point(aes(y = pupil_left))
+#' # Linearly interpolate values of the left eye:
+#' mutate(data,
+#'   pupil_left = interpolate_gaps(pupil_left, type = "linear")
+#' )
 #'
-#' # Spline interpolation
-#' gaps <- mutate(gaps, pupil_left_spline = interpolate_gaps(pupil_left,
-#'   type = "spline"))
+#' # Example 2: Realistic data
+#' blink
 #'
-#' ggplot(gaps, aes(x = timestamp)) +
-#'  geom_point(aes(y = pupil_left_spline), color = "red") +
-#'  geom_point(aes(y = pupil_left))
+#' # First remove outliers:
+#' blink <- mutate(blink,
+#'   pupil_left = dilation_speed_outliers_to_na(pupil_left, timestamp,
+#'     constant = 10),
+#'   pupil_right = dilation_speed_outliers_to_na(pupil_right, timestamp,
+#'     constant = 10)
+#' )
+#'
+#' # Then linearly interpolate gaps in pupil measurements of the left eye and
+#' # perform a spline interpolation on the right eye:
+#' blink <- mutate(blink,
+#'     pupil_left = interpolate_gaps(pupil_left, type = "linear"),
+#'     pupil_right = interpolate_gaps(pupil_right, type = "spline")
+#'   )
+#'
+#' # Restructure the data and plot the results to compare the pupil measurements
+#' # before the interpolation and after the interpolation:
+#' blink %>%
+#'   pivot_longer(
+#'     cols = starts_with("pupil"),
+#'     names_to = "pupil",
+#'     names_pattern = "(left|right)",
+#'     values_to = "pupil_size"
+#'  ) %>%
+#'  ggplot(aes(x = timestamp, y = pupil_size)) +
+#'    geom_point() +
+#'    facet_wrap(~ pupil)
 #'
 #' @export
-interpolate_gaps <- function(x, type = "linear", rule = 2, log = FALSE,
-  log_file = NULL, ...) {
+interpolate_gaps <- function(pupil, type = "linear", rule = 2, method = "fmm") {
 
-  # Check whether x is numeric
-  if(!is.numeric(x)) {
-    stop("x is not numeric.")
+  #TODO: Check the spline interpolation and make it behave better, probably by
+  # setting which points it should use to calculate the spline.
+
+  # Check whether the "pupil" argument is numeric:
+  if (!is.numeric(pupil)) {
+    stop("'pupil' must be a vector of numeric values.")
   }
 
-  # Check if there are missing values; if not, simply end the function
-  if (!anyNA(x)) {
-    return(x)
+  # Check if there are missing values; if not, simply return the original
+  # pupil measurements:
+  if (!anyNA(pupil)) {
+    return(pupil)
   }
 
-  # Check if there are only missing values, if so, end the function
-  if (sum(is.na(x)) == length(x)) {
-    return(x)
+  # Check if there are only missing values; if so, return the missing values and
+  # display a warning:
+  if (sum(is.na(pupil)) == length(pupil)) {
+    warning("No pupil measurements found; returning only missing values.")
+    return(pupil)
   }
 
-  # Check if there is only one non-missing value
-  if (sum(is.na(x)) == length(x) - 1) {
-    return(x)
+  # Check if there is only one non-missing value; if so, return the original
+  # pupil measurements and display a warning:
+  if (sum(is.na(pupil)) == length(pupil) - 1) {
+    warning("Only 1 non-missing value found; returning original values.")
+    return(pupil)
   }
 
-  # Check if a supported type of interpolation is requested
+  # Check if a supported type of interpolation is requested:
   if (type != "linear" & type != "spline") {
-    stop("Method must be 'linear' or 'spline'.")
+    stop("'type' must be 'linear' or 'spline'.")
   }
 
-  # Perform interpolation
-  n <- length(x)
+  # Perform interpolation:
+  n <- length(pupil)
   i <- 1:n
-  NAs <- is.na(x)
+  NAs <- is.na(pupil)
 
   if (type == "linear") {
-    res <- stats::approx(x = i[!NAs], y = x[!NAs], 1:n, rule = rule, ...)$y
+    res <- stats::approx(x = i[!NAs], y = pupil[!NAs], 1:n, rule = rule)$y
   }
   else if (type == "spline") {
-    res <- stats::spline(x = i[!NAs], y = x[!NAs], n = n, ...)$y
+    res <- stats::spline(x = i[!NAs], y = pupil[!NAs], n = n, method = method)$y
   }
 
-  # Merge interpolated values back into the original vector
-  x[NAs] <- res[NAs]
+  # Merge interpolated values back into the original vector:
+  pupil[NAs] <- res[NAs]
 
-  # Log
-  if (log) {
-    # Find the log file if it is not specified
-    if (is.null(log_file)) {
-      log_file <- find_log()
-    }
-
-    # Log the smooth step
-    if (type == "linear") {
-      text <- paste0("Applied linear interpolation")
-    } else {
-      text <- "Applied spline interpolation"
-    }
-
-    write(text, file = log_file, append = TRUE)
-  }
-
-  return(x)
+  return(pupil)
 }

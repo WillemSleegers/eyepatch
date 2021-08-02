@@ -1,6 +1,7 @@
 #' Missing timestamp data
 #'
-#' Pupil size data from a single trial that contains implicit missing timestamps.
+#' Pupil size data from a single trial that contains implicit missing
+#' timestamps.
 #'
 #' @format A data frame with 269 rows and 10 columns:
 #' \describe{
@@ -14,5 +15,6 @@
 #'   \item{validity_right}{Tobii validity marker of the right eye}
 #'   \item{eyetracker}{name of the eyetracker that was used to record the data}
 #'   \item{sampling_rate}{sampling rate of the eye tracker (in Hz)}
+#' }
 #'
 "missing"
